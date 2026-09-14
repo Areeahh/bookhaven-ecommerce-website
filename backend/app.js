@@ -15,7 +15,26 @@ const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
   .split(',')
   .map((url) => url.trim());
 
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like Postman, mobile apps, curl)
+    if (!origin) return callback(null, true);
+
+    // Allow explicitly listed origins (e.g. localhost, your main Vercel domain)
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Allow ANY Vercel deployment URL belonging to this project —
+    // covers the random preview URLs Vercel generates on every `vercel --prod`
+    // (e.g. bookhaven-e-commerce-xxxxx-areeha1.vercel.app)
+    if (/^https:\/\/bookhaven-e-commerce[a-z0-9-]*\.vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
+  }
+}));
 app.use(express.json());
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
