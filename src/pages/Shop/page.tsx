@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiFetch, isLoggedIn } from '../../lib/api';
+import { getBooks, addToCart as addToCartSupabase, isLoggedIn } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
 interface Book {
@@ -28,13 +28,12 @@ const Shop = () => {
   useEffect(() => {
     async function loadBooks() {
       try {
-        const data = await apiFetch('/books');
-        // Convert price (comes back as a string from Postgres) to a number
+        const data = await getBooks();
         const normalized = data.map((b: any) => ({ ...b, price: Number(b.price) }));
         setAllBooks(normalized);
         setFilteredBooks(normalized);
       } catch (err: any) {
-        setError('Could not load books. Is the backend server running?');
+        setError('Could not load books. Please try again shortly.');
       } finally {
         setLoading(false);
       }
@@ -76,17 +75,14 @@ const Shop = () => {
   }, [searchTerm, selectedCategory, selectedPriceRange, sortBy, allBooks]);
 
   async function handleAddToCart(bookId: number) {
-    if (!isLoggedIn()) {
+    if (!(await isLoggedIn())) {
       navigate('/login');
       return;
     }
 
     setAddingId(bookId);
     try {
-      await apiFetch('/cart', {
-        method: 'POST',
-        body: JSON.stringify({ bookId, quantity: 1 }),
-      });
+      await addToCartSupabase(bookId, 1);
     } catch (err: any) {
       console.error('Add to cart failed:', err.message);
     } finally {

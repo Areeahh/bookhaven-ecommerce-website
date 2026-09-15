@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch, isLoggedIn } from '../../lib/api';
+import { getCart, updateCartItem, removeCartItem, checkout, isLoggedIn } from '../../lib/supabase';
 
 interface CartItem {
   cart_item_id: number;
@@ -23,7 +23,7 @@ const Cart = () => {
   async function loadCart() {
     setLoading(true);
     try {
-      const data = await apiFetch('/cart');
+      const data = await getCart();
       setItems(data.items);
       setSubtotal(data.subtotal);
     } catch (err: any) {
@@ -34,20 +34,20 @@ const Cart = () => {
   }
 
   useEffect(() => {
-    if (!isLoggedIn()) {
-      navigate('/login');
-      return;
+    async function init() {
+      if (!(await isLoggedIn())) {
+        navigate('/login');
+        return;
+      }
+      loadCart();
     }
-    loadCart();
+    init();
   }, []);
 
   async function handleQuantityChange(cartItemId: number, quantity: number) {
     if (quantity < 1) return;
     try {
-      await apiFetch(`/cart/${cartItemId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ quantity }),
-      });
+      await updateCartItem(cartItemId, quantity);
       loadCart();
     } catch (err: any) {
       alert(err.message || 'Failed to update quantity');
@@ -56,7 +56,7 @@ const Cart = () => {
 
   async function handleRemove(cartItemId: number) {
     try {
-      await apiFetch(`/cart/${cartItemId}`, { method: 'DELETE' });
+      await removeCartItem(cartItemId);
       loadCart();
     } catch (err: any) {
       alert(err.message || 'Failed to remove item');
@@ -66,7 +66,7 @@ const Cart = () => {
   async function handleCheckout() {
     setPlacingOrder(true);
     try {
-      await apiFetch('/orders', { method: 'POST' });
+      await checkout();
       alert('Order placed successfully!');
       loadCart();
     } catch (err: any) {

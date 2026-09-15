@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiFetch, setSession } from '../../lib/api';
+import { signIn } from '../../lib/supabase';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -15,11 +15,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const data = await apiFetch('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
-      setSession(data.token, data.user);
+      await signIn(email, password);
       navigate('/shop');
     } catch (err: any) {
       setError(err.message || 'Login failed');
